@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: kilnlog
+      POSTGRES_PASSWORD: kilnlog
+      POSTGRES_DB: kilnlog
+    ports:
+      - "5436:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kilnlog -d kilnlog"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    ports:
+      - "8700:8700"
+    environment:
+      ASPNETCORE_URLS: http://+:8700
+      ConnectionStrings__Default: Host=db;Port=5432;Database=kilnlog;Username=kilnlog;Password=kilnlog
+      Jwt__Key: kilnlog-dev-jwt-secret-key-change-me-32chars
+      Jwt__Issuer: KilnLog
+      Jwt__Audience: KilnLog
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3700:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
